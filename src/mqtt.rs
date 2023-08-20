@@ -1,5 +1,5 @@
 // std
-use std::time::Duration;
+use std::{env, time::Duration};
 // crates.io
 use hap::serde_json::{self, Value};
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
@@ -14,7 +14,7 @@ pub struct MqttMessage {
 }
 
 pub async fn start(mqtt_tx: OneshotTx, mut mqtt_rx: Rx) -> Result<()> {
-	let mut mqtt_options = MqttOptions::new("rumqtt-async", "0.0.0.0", 1883);
+	let mut mqtt_options = MqttOptions::new("rumqtt-async", env::var("MQTT_HOST").unwrap(), 1883);
 
 	mqtt_options.set_keep_alive(Duration::from_secs(5));
 
