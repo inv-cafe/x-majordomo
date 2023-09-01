@@ -1,14 +1,14 @@
 [package]
 authors     = ["Xavier Lau <xavier@inv.cafe>"]
 build       = "build.rs"
-description = "HAP & MQTT smart pdu implementation."
+description = "HAP & MQTT smart majordomo implementation."
 edition     = "2021"
-homepage    = "https://hack.ink/pdu"
+homepage    = "https://inv.cafe/code/x-majordomo"
 license     = "GPL-3.0"
-name        = "pdu"
+name        = "x-majordomo"
 readme      = "README.md"
-repository  = "https://github.com/inv-cafe/pdu"
-version     = "0.2.0"
+repository  = "https://github.com/inv-cafe/x-majordomo"
+version     = "0.3.0"
 
 [profile.ci-dev]
 incremental = false
@@ -25,9 +25,12 @@ vergen = { version = "8.2", features = ["build", "cargo", "git", "gitcl"] }
 [dependencies]
 # crates.io
 anyhow             = { version = "1.0" }
+async-trait        = { version = "0.1" }
+clap               = { version = "4.4", features = ["derive"] }
 hap                = { git = "https://github.com/mzyy94/hap-rs", version = "0.1.0-pre.15", branch = "patch-verify" }
 rumqttc            = { version = "0.22" }
 serde              = { version = "1.0" }
 tokio              = { version = "1.32", features = ["macros", "rt-multi-thread", "time"] }
 tracing            = { version = "0.1" }
 tracing-subscriber = { version = "0.3" }
+wakey              = { version = "0.3" }

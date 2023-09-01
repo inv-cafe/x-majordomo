@@ -2,32 +2,76 @@ mod prelude {
 	pub use std::result::Result as StdResult;
 
 	pub use anyhow::Result;
+
+	// std
+	use std::sync::Arc;
+	// crates.io
+	use hap::{accessory::HapAccessory, futures::lock::Mutex, serde_json::Value, server::IpServer};
+	use tokio::sync::{mpsc, oneshot};
+
+	pub type OneshotTx = oneshot::Sender<Value>;
+	// pub type OneshotRx = oneshot::Receiver<Value>;
+	pub type Tx = mpsc::Sender<MqttMessage>;
+	pub type Rx = mpsc::Receiver<MqttMessage>;
+
+	#[async_trait::async_trait]
+	pub trait Register {
+		async fn register(self, bridge: &IpServer) -> Result<Arc<Mutex<Box<dyn HapAccessory>>>>;
+	}
+
+	#[derive(Debug)]
+	pub struct MqttMessage {
+		pub topic: String,
+		pub payload: String,
+	}
 }
 use prelude::*;
 
-mod hap;
-mod mqtt;
-use mqtt::MqttMessage;
+mod pdu;
+mod util;
+mod waker;
 
 // crates.io
-use ::hap::serde_json::Value;
-use tokio::sync::{mpsc, oneshot};
+use clap::Parser;
+use hap::server::Server;
 use tracing_subscriber::fmt;
 
-type OneshotTx = oneshot::Sender<Value>;
-type OneshotRx = oneshot::Receiver<Value>;
-type Tx = mpsc::Sender<MqttMessage>;
-type Rx = mpsc::Receiver<MqttMessage>;
+#[derive(Debug, Parser)]
+#[command(
+	version = concat!(
+		env!("CARGO_PKG_VERSION"),
+		"-",
+		env!("VERGEN_GIT_SHA"),
+		"-",
+		env!("VERGEN_CARGO_TARGET_TRIPLE"),
+	),
+	about,
+	rename_all = "kebab",
+)]
+struct Cli {
+	/// Path to the configuration folder.
+	#[arg(long, short, value_name = "PATH")]
+	configuration: Option<String>,
+	/// MQTT host.
+	#[arg(long, short, value_name = "IP", default_value_t = String::from("0.0.0.0"))]
+	mqtt_host: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
 	fmt::init();
 
-	let (hap_tx, mqtt_rx) = mpsc::channel(8);
-	let (mqtt_tx, hap_rx) = oneshot::channel();
+	let Cli { configuration, mqtt_host } = Cli::parse();
+	let bridge = util::bridge(configuration.as_deref()).await?;
 
-	// select
-	let _ = tokio::join!(hap::start(hap_tx, hap_rx), mqtt::start(mqtt_tx, mqtt_rx));
+	waker::initialize(&bridge).await?;
+
+	let refresh_pdu = pdu::initialize(mqtt_host, &bridge).await?;
+	let service = bridge.run_handle();
+
+	refresh_pdu.await?;
+	// loop
+	service.await.map_err(|e| anyhow::anyhow!("{e}"))?;
 
 	Ok(())
 }

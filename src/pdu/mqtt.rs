@@ -1,20 +1,14 @@
 // std
-use std::{env, time::Duration};
+use std::time::Duration;
 // crates.io
 use hap::serde_json::{self, Value};
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
 use tokio::task;
-// pdu
+// x-majordomo
 use crate::{prelude::*, OneshotTx, Rx};
 
-#[derive(Debug)]
-pub struct MqttMessage {
-	pub topic: String,
-	pub payload: String,
-}
-
-pub async fn start(mqtt_tx: OneshotTx, mut mqtt_rx: Rx) -> Result<()> {
-	let mut mqtt_options = MqttOptions::new("rumqtt-async", env::var("MQTT_HOST").unwrap(), 1883);
+pub async fn start(host: String, tx: OneshotTx, mut rx: Rx) -> Result<()> {
+	let mut mqtt_options = MqttOptions::new("rumqtt-async", host, 1883);
 
 	mqtt_options.set_keep_alive(Duration::from_secs(5));
 
@@ -39,13 +33,13 @@ pub async fn start(mqtt_tx: OneshotTx, mut mqtt_rx: Rx) -> Result<()> {
 		break serde_json::from_slice::<Value>(&p.payload[10..])?;
 	};
 
-	mqtt_tx.send(state).map_err(|e| anyhow::anyhow!("{e}"))?;
+	tx.send(state).map_err(|e| anyhow::anyhow!("{e}"))?;
 	client.unsubscribe("/yespeed/pdu/yespeed/19847786504205500130392/in/1000100").await?;
 
 	task::spawn(async move {
 		loop {
 			// err
-			let Some(MqttMessage { topic, payload }) = mqtt_rx.recv().await else { continue };
+			let Some(MqttMessage { topic, payload }) = rx.recv().await else { continue };
 			let _ = client.publish(topic, QoS::AtLeastOnce, false, payload).await;
 		}
 	});
