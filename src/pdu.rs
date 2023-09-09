@@ -65,7 +65,7 @@ pub async fn initialize(
 	// loop
 	task::spawn(mqtt::start(mqtt_host, mqtt_tx, mqtt_rx));
 
-	let f = || async move {
+	Ok(async move {
 		let state = hap_rx.await?;
 		let switches = &state[0]["subdevs"];
 
@@ -85,7 +85,5 @@ pub async fn initialize(
 		}
 
 		Ok(())
-	};
-
-	Ok(f())
+	})
 }

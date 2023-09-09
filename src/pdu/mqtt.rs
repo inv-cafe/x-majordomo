@@ -38,18 +38,16 @@ pub async fn start(host: String, tx: OneshotTx, mut rx: Rx) -> Result<()> {
 
 	task::spawn(async move {
 		loop {
-			// err
 			let Some(MqttMessage { topic, payload }) = rx.recv().await else { continue };
 			let _ = client.publish(topic, QoS::AtLeastOnce, false, payload).await;
 		}
 	});
 	task::spawn(async move {
 		loop {
-			let Ok(Event::Incoming(Incoming::Publish(p))) = event_loop.poll().await else {
+			let Ok(Event::Incoming(Incoming::Publish(_p))) = event_loop.poll().await else {
 				continue;
 			};
-
-			tracing::info!("{}", String::from_utf8_lossy(&p.payload));
+			// tracing::info!("{}", String::from_utf8_lossy(&p.payload));
 		}
 	});
 
