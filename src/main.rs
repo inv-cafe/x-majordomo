@@ -14,7 +14,6 @@ mod prelude {
 	pub type Tx = mpsc::Sender<MqttMessage>;
 	pub type Rx = mpsc::Receiver<MqttMessage>;
 
-	#[async_trait::async_trait]
 	pub trait Register {
 		async fn register(self, bridge: &IpServer) -> Result<Arc<Mutex<Box<dyn HapAccessory>>>>;
 	}

@@ -32,15 +32,12 @@ jobs:
         run: |
           mv target/${{ matrix.target.name }}/ci-release/x-majordomo${{ matrix.target.extension }} .
           zstd --ultra -22 -o x-majordomo-${{ matrix.target.name }}.zst x-majordomo${{ matrix.target.extension }}
-      - name: Collect artifact
-        run: |
-          mkdir -p artifacts
-          mv x-majordomo-${{ matrix.target.name }}.zst artifacts
       - name: Upload artifact
-        uses: actions/upload-artifact@v3.1.3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
-          path: artifacts
+          name: x-majordomo-${{ matrix.target.name }}
+          path: x-majordomo-${{ matrix.target.name }}.zst
+          retention-days: 1
 
   staging:
     name: Staging
@@ -48,31 +45,34 @@ jobs:
     needs: [build]
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: artifacts
           path: artifacts
       - name: Hash
         run: |
+          mkdir -p artifacts
+          mv x-majordomo-*/* artifacts/
           cd artifacts
           sha256sum * | tee ../SHA256
           md5sum * | tee ../MD5
           mv ../SHA256 .
           mv ../MD5 .
-      - name: Publish
-        uses: softprops/action-gh-release@v1
-        with:
-          discussion_category_name: Announcements
-          generate_release_notes: true
-          files: artifacts/*
+          ls -al
+      # - name: Publish
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     discussion_category_name: Announcements
+      #     generate_release_notes: true
+      #     files: artifacts/*
 
-  clean-artifacts:
-    name: Clean artifacts
-    if: always()
-    needs: [staging]
-    steps:
-      - name: Clean artifacts
-        uses: geekyeggo/delete-artifact@v2
-        with:
-          name: artifacts
-    runs-on: ubuntu-latest
+  # publish-on-crates-io:
+  #   name: Publish on crates.io
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Fetch latest code
+  #       uses: actions/checkout@v4
+  #     - name: Login
+  #       run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
+  #     - name: Publish
+  #       run: cargo publish --locked
